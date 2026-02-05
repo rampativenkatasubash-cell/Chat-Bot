@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Subash's AI - Text Only</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Söhne:wght@300;400;500;600&family=Outfit:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        /* --- THEME VARIABLES --- */
+        :root[data-theme="dark"] {
+            --bg-sidebar: #202123;
+            --bg-main: #343541;
+            --bg-input: #40414f;
+            --text-primary: #ececf1;
+            --text-secondary: #c5c5d2;
+            --border-color: #4d4d4f;
+            --bubble-user: #10a37f;
+            --bubble-bot: #444654;
+        }
+
+        :root[data-theme="light"] {
+            --bg-sidebar: #f9f9f9;
+            --bg-main: #ffffff;
+            --bg-input: #ffffff;
+            --text-primary: #374151;
+            --text-secondary: #6b7280;
+            --border-color: #e5e7eb;
+            --bubble-user: #10a37f;
+            --bubble-bot: #f3f4f6;
+        }
+
+        :root[data-theme="galaxy"] {
+            --bg-sidebar: #0f172a;
+            --bg-main: #171717;
+            --bg-input: #262626;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+            --bubble-user: linear-gradient(135deg, #7c3aed, #db2777);
+            --bubble-bot: #1e293b;
+        }
+
+        body {
+            font-family: 'Söhne', 'Segoe UI', Helvetica, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* --- UTILS --- */
+        .sidebar-bg { background-color: var(--bg-sidebar); border-right: 1px solid var(--border-color); }
+        .main-bg { background-color: var(--bg-main); }
+        .input-bg { background-color: var(--bg-input); border: 1px solid var(--border-color); }
+        
+        /* Galaxy Theme Special */
+        :root[data-theme="galaxy"] .main-bg {
+            background-image: radial-gradient(circle at 50% 0%, #2e1065 0%, #000000 70%);
+        }
+
+        /* Message Bubbles */
+        .bubble-user { background: var(--bubble-user); color: white; border-radius: 18px 18px 0 18px; }
+        .bubble-bot { background: var(--bubble-bot); color: var(--text-primary); border-radius: 18px 18px 18px 0; border: 1px solid var(--border-color); }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(150, 150, 150, 0.3); border-radius: 4px; }
+
+        /* Animations */
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .msg-anim { animation: slideUp 0.3s ease-out forwards; }
+        .typing-dot { animation: pulse 1.5s infinite ease-in-out; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes pulse { 0%, 100% { opacity: 0.4; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1); } }
+    </style>
+</head>
+
+<body class="h-screen flex overflow-hidden text-sm md:text-base">
+
+    <aside id="sidebar" class="sidebar-bg w-[260px] flex-col flex-shrink-0 hidden md:flex transition-colors duration-300">
+        <div class="p-3">
+            <button onclick="clearChat()" class="flex items-center gap-3 px-3 py-3 w-full border border-[var(--border-color)] rounded-md hover:bg-gray-500/10 transition-colors text-left text-[var(--text-primary)]">
+                <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" class="h-4 w-4"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span class="text-sm">New chat</span>
+            </button>
+        </div>
+        <div class="flex-1 overflow-y-auto px-3 py-2 space-y-2">
+            <div class="text-xs font-semibold text-[var(--text-secondary)] px-2 py-2">History</div>
+            <button class="flex items-center gap-3 px-3 py-3 w-full rounded-md hover:bg-gray-500/10 transition-colors text-left text-[var(--text-primary)] truncate">
+                <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" class="h-4 w-4 flex-shrink-0 text-[var(--text-secondary)]"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                <span class="truncate text-sm">Previous Chat...</span>
+            </button>
+        </div>
+        <div class="border-t border-[var(--border-color)] p-3 space-y-1">
+            <div class="relative group">
+                <button class="flex items-center gap-3 px-3 py-3 w-full rounded-md hover:bg-gray-500/10 transition-colors text-[var(--text-primary)]">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" /></svg>
+                    <span class="text-sm">Change Theme</span>
+                </button>
+                <div class="absolute bottom-full left-0 w-full bg-[var(--bg-input)] border border-[var(--border-color)] rounded-md shadow-xl mb-2 hidden group-hover:block overflow-hidden z-20">
+                    <button onclick="setTheme('dark')" class="block w-full text-left px-4 py-2 text-sm hover:bg-gray-500/20 text-[var(--text-primary)]">ChatGPT Dark</button>
+                    <button onclick="setTheme('light')" class="block w-full text-left px-4 py-2 text-sm hover:bg-gray-500/20 text-[var(--text-primary)]">Light Mode</button>
+                    <button onclick="setTheme('galaxy')" class="block w-full text-left px-4 py-2 text-sm hover:bg-gray-500/20 text-[var(--text-primary)]">Subash Galaxy</button>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 px-3 py-3 w-full rounded-md hover:bg-gray-500/10 transition-colors text-[var(--text-primary)] cursor-pointer">
+                <div class="w-6 h-6 rounded-full bg-purple-600 flex items-center justify-center text-white text-xs font-bold">S</div>
+                <div class="text-sm font-medium">Subash User</div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col relative main-bg h-full">
+        <div class="md:hidden flex items-center justify-between p-3 border-b border-[var(--border-color)] text-[var(--text-primary)] bg-[var(--bg-sidebar)]">
+            <button onclick="toggleSidebar()" class="p-2 hover:bg-gray-500/10 rounded-md">
+                <svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" class="h-6 w-6"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </button>
+            <span class="font-medium">Subash's AI</span>
+            <button onclick="clearChat()" class="p-2 hover:bg-gray-500/10 rounded-md"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /></svg></button>
+        </div>
+
+        <div id="chat-container" class="flex-1 overflow-y-auto scroll-smooth p-4 md:p-6 pb-48">
+            <div id="welcome-screen" class="h-full flex flex-col items-center justify-center text-center text-[var(--text-primary)]">
+                <div class="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-700 rounded-full flex items-center justify-center mb-6 shadow-2xl">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+                </div>
+                <h2 class="text-3xl font-semibold mb-2">Subash's AI</h2>
+                <p class="text-[var(--text-secondary)] mb-8">Chat is ready. (No backend connected)</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl w-full">
+                    <button onclick="fillInput('Who are you?')" class="p-3 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl hover:bg-gray-500/10 transition text-sm text-left shadow-sm">"Who are you?"</button>
+                    <button onclick="fillInput('Tell me a story')" class="p-3 bg-[var(--bg-input)] border border-[var(--border-color)] rounded-xl hover:bg-gray-500/10 transition text-sm text-left shadow-sm">"Tell me a story"</button>
+                </div>
+            </div>
+            <div id="messages-list" class="flex flex-col gap-6 max-w-4xl mx-auto w-full"></div>
+        </div>
+
+        <div class="absolute bottom-0 left-0 w-full main-bg z-30">
+            <div class="pt-2 pb-6 px-4 bg-gradient-to-t from-[var(--bg-main)] via-[var(--bg-main)] to-transparent">
+                <div class="max-w-3xl mx-auto relative">
+                    <form id="chat-form" class="relative flex items-end w-full gap-2">
+                        <div class="relative flex-1">
+                            <input type="text" id="user-input" 
+                                class="w-full input-bg text-[var(--text-primary)] rounded-2xl py-4 pl-5 pr-12 shadow-lg focus:outline-none focus:ring-1 focus:ring-gray-400 transition-all"
+                                placeholder="Message Subash's AI..." autocomplete="off">
+                            
+                            <button type="submit" id="send-btn" class="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-transparent text-[var(--text-secondary)] hover:bg-green-600 hover:text-white rounded-xl transition-all disabled:opacity-40">
+                                <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                            </button>
+                        </div>
+                    </form>
+                    <div class="text-center mt-2">
+                        <p class="text-[10px] text-[var(--text-secondary)] uppercase tracking-widest">Local Mode / Demo</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const chatForm = document.getElementById('chat-form');
+        const userInput = document.getElementById('user-input');
+        const messagesList = document.getElementById('messages-list');
+        const chatContainer = document.getElementById('chat-container');
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const sendBtn = document.getElementById('send-btn');
+        
+        // This URL is likely invalid for you, so the code handles the error gracefully
+        const API_URL = 'http://127.0.0.1:5000/chat'; 
+
+        // Theme Switcher
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+        }
+        setTheme(localStorage.getItem('theme') || 'dark');
+
+        function toggleSidebar() {
+            const sb = document.getElementById('sidebar');
+            sb.classList.toggle('hidden');
+            sb.classList.toggle('absolute');
+            sb.classList.toggle('z-50');
+            sb.classList.toggle('h-full');
+        }
+
+        function fillInput(text) {
+            userInput.value = text;
+            userInput.focus();
+        }
+
+        // --- SUBMISSION ---
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            if (welcomeScreen) welcomeScreen.style.display = 'none';
+
+            addMessage(message, 'user');
+            userInput.value = '';
+            setLoading(true);
+
+            const loadingId = addLoading();
+
+            // Try to hit backend, if fail, simulate response
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message })
+                });
+
+                if (!response.ok) throw new Error('Backend not found');
+                const data = await response.text();
+                
+                removeLoading(loadingId);
+                addMessage(data, 'bot');
+
+            } catch (error) {
+                // FALLBACK: Simulate a response since you have no backend
+                setTimeout(() => {
+                    removeLoading(loadingId);
+                    
+                    // Simple logic to make it feel alive
+                    let reply = "I am a simulated response because no backend is connected.";
+                    if(message.toLowerCase().includes("hello")) reply = "Hello! I am Subash's AI interface. How can I help you?";
+                    else if(message.toLowerCase().includes("time")) reply = "It is currently " + new Date().toLocaleTimeString();
+                    else if(message.toLowerCase().includes("joke")) reply = "Why did the developer go broke? Because he used up all his cache!";
+                    else if(message.toLowerCase().includes("image")) reply = "I can't generate real images without a backend, but imagine a beautiful sunset here!";
+                    
+                    addMessage(reply, 'bot');
+                }, 1500);
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        function addMessage(text, sender) {
+            const wrapper = document.createElement('div');
+            wrapper.className = `flex w-full ${sender === 'user' ? 'justify-end' : 'justify-start'} msg-anim`;
+
+            const userAvatar = `<div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center ml-3 shadow-md flex-shrink-0"><span class="text-white text-xs font-bold">S</span></div>`;
+            const botAvatar = `<div class="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center mr-3 shadow-md flex-shrink-0"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></div>`;
+            const bubbleClass = sender === 'user' ? 'bubble-user' : 'bubble-bot';
+
+            const content = sender === 'user' 
+                ? `<div class="${bubbleClass} px-5 py-3 max-w-[80%] md:max-w-[70%] text-sm md:text-base shadow-sm leading-relaxed text-left">
+                        ${escapeHtml(text)}
+                   </div>${userAvatar}`
+                : `${botAvatar}
+                   <div class="${bubbleClass} px-5 py-3 max-w-[80%] md:max-w-[70%] text-sm md:text-base shadow-sm leading-relaxed text-left">
+                        ${text} </div>`;
+            
+            wrapper.innerHTML = content;
+            messagesList.appendChild(wrapper);
+            scrollToBottom();
+        }
+
+        function addLoading() {
+            const id = 'loading-' + Date.now();
+            const wrapper = document.createElement('div');
+            wrapper.id = id;
+            wrapper.className = `flex w-full justify-start msg-anim`;
+            wrapper.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center mr-3 shadow-md flex-shrink-0">
+                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                </div>
+                <div class="bubble-bot px-5 py-4 flex items-center gap-1.5 shadow-sm">
+                    <div class="w-2 h-2 bg-gray-400 rounded-full typing-dot"></div>
+                    <div class="w-2 h-2 bg-gray-400 rounded-full typing-dot"></div>
+                    <div class="w-2 h-2 bg-gray-400 rounded-full typing-dot"></div>
+                </div>
+            `;
+            messagesList.appendChild(wrapper);
+            scrollToBottom();
+            return id;
+        }
+
+        function removeLoading(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        function setLoading(isLoading) {
+            sendBtn.disabled = isLoading;
+            userInput.disabled = isLoading;
+            if(!isLoading) userInput.focus();
+        }
+
+        function scrollToBottom() {
+            chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
+        }
+
+        function clearChat() {
+            messagesList.innerHTML = '';
+            welcomeScreen.style.display = 'flex';
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML.replace(/\n/g, '<br>');
+        }
+    </script>
+</body>
+</html>
